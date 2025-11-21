@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giftcode Redeemer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .results {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .result-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .result-item.success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            color: #155724;
+        }
+
+        .result-item.error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+        }
+
+        .result-item.info {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            color: #0c5460;
+        }
+
+        .status-text {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PLAY TOGETHER REDEEMER</h1>
+        
+        <div class="form-group">
+            <label for="giftcode">Giftcode:</label>
+            <input type="text" id="giftcode" placeholder="Nhập giftcode" required>
+        </div>
+
+        <button id="redeemBtn" onclick="redeemGiftcode()">Redeem Giftcode</button>
+
+        <div class="progress" id="progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+            <div class="status-text" id="statusText">Đang xử lý...</div>
+        </div>
+
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        // Cấu hình cố định
+        const SERVER_ID = "2";
+        const GAME_CODE = "661";
+        
+        // Danh sách tài khoản (roleId và tên người dùng)
+        const ACCOUNTS = [
+            { roleId: "4L8G-TTRL-LMGC", name: "Higo52" },
+            { roleId: "ATGF-FAG2", name: "callmeRika112" },
+            { roleId: "ATGF-FAG3", name: "Ying" },
+            { roleId: "ATGF-FAG4", name: "Ngxnii04" }
+            // Thêm tài khoản mới vào đây
+        ];
+
+        let isProcessing = false;
+
+        async function redeemGiftcode() {
+            if (isProcessing) return;
+
+            const giftcode = document.getElementById('giftcode').value.trim();
+
+            if (!giftcode) {
+                alert('Vui lòng nhập giftcode!');
+                return;
+            }
+
+            isProcessing = true;
+            const redeemBtn = document.getElementById('redeemBtn');
+            const progress = document.getElementById('progress');
+            const progressFill = document.getElementById('progressFill');
+            const statusText = document.getElementById('statusText');
+            const results = document.getElementById('results');
+
+            redeemBtn.disabled = true;
+            progress.style.display = 'block';
+            results.innerHTML = '';
+
+            const total = ACCOUNTS.length;
+            let completed = 0;
+            let success = 0;
+            let failed = 0;
+
+            for (let i = 0; i < ACCOUNTS.length; i++) {
+                const account = ACCOUNTS[i];
+                const roleId = account.roleId;
+                const userName = account.name;
+                
+                try {
+                    const response = await fetch('https://vgrapi-sea.vnggames.com/coordinator/api/v1/code/redeem', {
+                        method: 'POST',
+                        headers: {
+                            'content-type': 'application/json',
+                            'origin': 'https://giftcode.vnggames.com',
+                            'user-agent': 'Mozilla/5.0',
+                            'x-client-region': 'VN'
+                        },
+                        body: JSON.stringify({
+                            serverId: SERVER_ID,
+                            gameCode: GAME_CODE,
+                            roleId: roleId,
+                            roleName: roleId,
+                            code: giftcode
+                        })
+                    });
+
+                    const data = await response.json();
+                    completed++;
+
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'result-item';
+
+                    if (response.ok && data.status === 0) {
+                        success++;
+                        resultDiv.classList.add('success');
+                        resultDiv.innerHTML = `✓ ${userName}: Thành công! ${data.message || ''}`;
+                    } else {
+                        failed++;
+                        resultDiv.classList.add('error');
+                        resultDiv.innerHTML = `✗ ${userName}: Thất bại - ${data.message || 'Lỗi không xác định'}`;
+                    }
+
+                    results.insertBefore(resultDiv, results.firstChild);
+
+                } catch (error) {
+                    completed++;
+                    failed++;
+                    
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'result-item error';
+                    resultDiv.innerHTML = `✗ ${userName}: Lỗi kết nối - ${error.message}`;
+                    results.insertBefore(resultDiv, results.firstChild);
+                }
+
+                // Cập nhật progress
+                const percentage = Math.round((completed / total) * 100);
+                progressFill.style.width = percentage + '%';
+                progressFill.textContent = percentage + '%';
+                statusText.textContent = `Đã xử lý: ${completed}/${total} | Thành công: ${success} | Thất bại: ${failed}`;
+
+                // Delay nhỏ giữa các request để tránh spam
+                if (i < ACCOUNTS.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
+
+            // Hoàn thành
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'result-item info';
+            summaryDiv.innerHTML = `<strong>📊 Tổng kết:</strong> Đã xử lý ${total} tài khoản - Thành công: ${success} - Thất bại: ${failed}`;
+            results.insertBefore(summaryDiv, results.firstChild);
+
+            redeemBtn.disabled = false;
+            isProcessing = false;
+        }
+
+        // Cho phép nhấn Enter để submit
+        document.getElementById('giftcode').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !isProcessing) {
+                redeemGiftcode();
+            }
+        });
+    </script>
+</body>
+</html>
