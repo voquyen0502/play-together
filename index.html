@@ -246,10 +246,10 @@
                     const resultDiv = document.createElement('div');
                     resultDiv.className = 'result-item';
 
-                    if (response.ok && data.status === 0) {
+                    if (data.message === 'Success') {
                         success++;
                         resultDiv.classList.add('success');
-                        resultDiv.innerHTML = `✓ ${userName}: Thành công! ${data.message || ''}`;
+                        resultDiv.innerHTML = `✓ ${userName}: Thành công!`;
                     } else {
                         failed++;
                         resultDiv.classList.add('error');
