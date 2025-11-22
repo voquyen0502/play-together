@@ -295,22 +295,69 @@
     </div>
 
     <script>
+        // Cấu hình Google Sheets
+        const SHEET_CONFIG = {
+            apiKey: 'AIzaSyBmi1_P6h0pOdrzdr0rWu7kZ0zFEPdo78M', // Thay bằng API key của bạn
+            sheetId: '1sLkoC-LPSl5WHAN4LqnJAJVxAEuSg6DhOjkj9EwzqGU', // Thay bằng ID của Google Sheet
+            range: 'B:C' // Thử không có tên sheet trước
+        };
+
         // Cấu hình cố định
         const SERVER_ID = "2";
         const GAME_CODE = "661";
         
-        // Danh sách tài khoản (roleId và tên người dùng)
-        const ACCOUNTS = [
+        // Danh sách tài khoản (sẽ được load từ Google Sheets)
+        let ACCOUNTS = [
             { roleId: "4L8G-TTRL-LMGC", name: "Higo52" },
             { roleId: "YK4Y-TCRL-LMGY", name: "callmeRika112" },
             { roleId: "UMFT-FURL-LMGU", name: "Yingʕ⩊ʔ" },
             { roleId: "4MAY-YC9L-LMYG", name: "Ngxnii04" },
             { roleId: "BKEG-ZTRL-LMYG", name: "Utongtreuwu" },
             { roleId: "4MAH-T3RL-LMGY", name: "Wuinss" }
-            // Thêm tài khoản mới vào đây
+            // Danh sách mặc định
         ];
 
         let isProcessing = false;
+
+        // Load dữ liệu từ Google Sheets
+        async function loadAccountsFromSheet() {
+            try {
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_CONFIG.sheetId}/values/${SHEET_CONFIG.range}?key=${SHEET_CONFIG.apiKey}`;
+                console.log('Đang tải từ:', url);
+                
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('API Error:', errorData);
+                    throw new Error(`HTTP ${response.status}: ${errorData.error?.message || 'Không thể tải dữ liệu'}`);
+                }
+                
+                const data = await response.json();
+                console.log('Dữ liệu nhận được:', data);
+                
+                if (data.values && data.values.length > 1) {
+                    // Bỏ qua dòng tiêu đề (dòng đầu tiên)
+                    ACCOUNTS = data.values.slice(1)
+                        .filter(row => row[0] && row[1]) // Chỉ lấy dòng có đủ ID và Ingame
+                        .map(row => ({
+                            roleId: row[0].trim(),
+                            name: row[1].trim()
+                        }));
+                    
+                    console.log(`✅ Đã tải ${ACCOUNTS.length} tài khoản từ Google Sheets`);
+                    return true;
+                } else {
+                    console.warn('Sheet không có dữ liệu hoặc chỉ có header');
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Lỗi khi tải dữ liệu từ Google Sheets:', error.message);
+                console.error('Chi tiết:', error);
+                alert(`Không thể tải dữ liệu từ Google Sheets.\nLỗi: ${error.message}\n\nSử dụng danh sách mặc định.`);
+                return false;
+            }
+        }
 
         // Khởi tạo danh sách tài khoản khi load trang
         function initializeAccountList() {
@@ -383,7 +430,17 @@
         }
 
         // Load danh sách khi trang được tải
-        window.addEventListener('DOMContentLoaded', initializeAccountList);
+        window.addEventListener('DOMContentLoaded', async function() {
+            // Hiển thị loading
+            const selectedText = document.getElementById('selectedText');
+            selectedText.textContent = 'Đang tải dữ liệu...';
+            
+            // Load từ Google Sheets
+            await loadAccountsFromSheet();
+            
+            // Khởi tạo UI
+            initializeAccountList();
+        });
 
         async function redeemGiftcode() {
             if (isProcessing) return;
